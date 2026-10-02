@@ -1,0 +1,20 @@
+[
+  {"style": "h1", "text": "第一章　緒論"},
+  {"style": "p", "text": "「這是未閉合的引號。我的的書很好看，的的確確如此。他說,好。句號後又逗號。，連續。这个東西以后再说。頭發很長。"},
+  {"style": "p", "text": "身份證與身分證都要帶。本書參考 Smith (2010) 與（王小明，2015）的研究，另見 (Jones, 2018)。一九九〇年代（1990 年代）不算引用。"},
+  {"style": "p", "text": "見圖1-2與表1-1。"},
+  {"style": "cap", "text": "圖1-1　示意"},
+  {"style": "cap", "text": "圖1-3　流程"},
+  {"style": "cap", "text": "表1-1　數據"},
+  {"style": "p", "text": "Saccardo described it. Saccardo again, Saccardo, Saccardo, Saccardo, Saccardo, Saccardo, Saccardo. But Saccado once."},
+  {"style": "p", "text": "這是一段刻意寫得很長而且完全沒有任何標點符號的文字用來測試無標點長串的偵測功能是否能夠正常運作並且回報正確的位置與長度以便編輯檢查"},
+  {"style": "h1", "text": "第三章　方法"},
+  {"style": "h2", "text": "3.1　資料"},
+  {"style": "h2", "text": "3.3　分析"},
+  {"style": "p", "text": "註腳測試。", "footnote": "以后再議。"},
+  {"style": "p", "text": "修訂測試：", "del": "这里", "ins": "插入（未閉合"},
+  {"style": "h1", "text": "參考文獻"},
+  {"style": "p", "text": "Smith, J. (2010). A book. Publisher."},
+  {"style": "p", "text": "Lee, K. (2011). Another book. Publisher."},
+  {"style": "p", "text": "王小明（2015）。書名。出版社。"}
+]

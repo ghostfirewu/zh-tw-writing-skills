@@ -1,0 +1,12 @@
+{
+  "name": "zh-tw-writing-skills",
+  "description": "繁體中文（台灣）寫作與編輯的 Claude Code plugin",
+  "owner": { "name": "ghostfirewu", "url": "https://github.com/ghostfirewu" },
+  "plugins": [
+    {
+      "name": "zh-tw-writing",
+      "source": "./",
+      "description": "簡體殘留與中國用語守門、AI 腔過濾、書稿規則式檢查，附寫檔後自動掃簡體的 hook"
+    }
+  ]
+}

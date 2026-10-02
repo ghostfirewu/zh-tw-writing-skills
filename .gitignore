@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.DS_Store
+~$*
+*_健檢報表_*.xlsx
+*_排版比對_*.xlsx
+*_索引_*.docx
+*_索引核對_*.xlsx
