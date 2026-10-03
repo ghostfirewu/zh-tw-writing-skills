@@ -5,7 +5,16 @@
 - **次版號**：新增功能、新增參數、新增或刪除詞條、調整詞條級別（A／B）。詞表的變動不算不相容，但接入者的 Lint 可能多出或少了命中；調整級別還會改變 `zhtw_check.py` 的結束代碼。這些都列在「詞表」段，影響結束代碼的另外註明。
 - **修訂號**：修正錯誤、調整文字，不改介面也不增減詞條。
 
-每次發布都要升 `.claude-plugin/plugin.json` 的版本號。CI 通過後會自動建立 `v<版本號>` 標籤，Claude Code 使用者也只有在版本號改變時才會收到更新。
+每次發布都要升 `.claude-plugin/plugin.json` 的版本號。CI 通過後會自動建立 `v<版本號>` 標籤與 GitHub Release（說明取自本檔對應的段落），Claude Code 使用者也只有在版本號改變時才會收到更新。
+
+## v1.2.1
+
+**新增**
+- 自動發布：`main` 上的測試通過後，除了建立標籤，也會建立 GitHub Release，說明取自 `CHANGELOG.md` 對應版本的段落。
+- 舊版標籤可以在 Actions 頁面手動執行 `release`、輸入版本號，補建 Release。
+- `tests/test_meta.py` 檢查 `CHANGELOG.md` 有目前版本的說明段落。
+
+**詞表**：無變動。
 
 ## v1.2.0
 

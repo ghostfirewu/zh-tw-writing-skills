@@ -8,7 +8,7 @@
 2. 跑 `python3 tests/run_all.py`，全部 `PASS` 才發 PR（書稿工具包的測試需要先安裝 `skills/manuscript-check/scripts/requirements.txt`）。
 3. 要讓使用者拿到的改動，**一定要升 `.claude-plugin/plugin.json` 的版本號**，並在 `CHANGELOG.md` 最上面寫一段。版本規則見 `CHANGELOG.md` 開頭。
    - 沒升版本號，Claude Code 使用者就算打開自動更新也收不到。
-   - 合併後 CI 會自動建立 `v<版本號>` 標籤，不必手動打。
+   - 合併後 CI 會自動建立 `v<版本號>` 標籤和 GitHub Release，Release 說明直接取自 `CHANGELOG.md` 那一段，所以那一段要寫給使用者看。不必手動打標籤。
 4. 動到 `docs/integration.md` 第 4、5 節列出的介面（檔案路徑、資料格式、參數、結束代碼、`--json` 欄位、hook 行為、專案設定）：**改名、刪除或改變既有行為才升主版號；新增參數或選用功能只升次版號**。詞表增刪、改 A／B 級別不算這裡的「刪除」，一律升次版號（見 `CHANGELOG.md` 開頭）。升主版號時在 `CHANGELOG.md` 標明「不相容」。
 5. 改到 `skills/manuscript-check/` 時，除了 `CHANGELOG.md`，也要在 `skills/manuscript-check/scripts/變更紀錄.md` 最後追加一筆（那份隨工具包單獨流通）。
 

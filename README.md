@@ -25,7 +25,7 @@
 - 自動更新預設關閉。要打開：`/plugin` → Marketplaces → 選 `zh-tw-writing-skills` → Enable auto-update。
 - 手動更新：`/plugin marketplace update zh-tw-writing-skills`，或在終端機執行 `claude plugin update zh-tw-writing@zh-tw-writing-skills`。
 - 想停在某一版：加入時在後面接標籤，例如 `/plugin marketplace add ghostfirewu/zh-tw-writing-skills#v1.2.0`。
-- 每一版改了什麼見 [`CHANGELOG.md`](CHANGELOG.md)。
+- 每一版改了什麼見 [`CHANGELOG.md`](CHANGELOG.md) 或 GitHub 的 Releases 頁面。
 
 ### 其他支援 SKILL.md 的工具（claude.ai、其他 agent）
 
