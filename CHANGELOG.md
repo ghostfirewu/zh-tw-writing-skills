@@ -7,6 +7,18 @@
 
 每次發布都要升 `.claude-plugin/plugin.json` 的版本號。CI 通過後會自動建立 `v<版本號>` 標籤與 GitHub Release（說明取自本檔對應的段落），Claude Code 使用者也只有在版本號改變時才會收到更新。
 
+## v1.2.2
+
+**修正**
+- `hooks/run.sh`：改成實際執行一次確認 Python 能用才採用，依序試 `python3`、`python`。過去只看 `command -v` 找不找得到，Windows 上的 Microsoft Store 空殼別名找得到卻跑不動，每次寫檔都會跳出錯誤；現在會改用下一個，都不能用就安靜放行。探測時不讀標準輸入，不影響交給 hook 的內容。
+- `hooks/zhtw_post_write.py` 剝除前置 BOM 的那行，原本直接寫了看不見的 U+FEFF 字元，改成轉義寫法 `\uFEFF`。行為不變，只是編輯器和 diff 終於看得到它。`tests/test_hook.py` 同一處一併改。
+
+**新增**
+- `tests/test_hook.py`：`run.sh` 三種情況的測試（python3 是空殼、兩個都是空殼、python3 正常）；系統沒有 `sh` 時略過。
+- `tests/test_meta.py`：文字檔中段不得含字面 BOM。
+
+**詞表**：無變動。
+
 ## v1.2.1
 
 **新增**
