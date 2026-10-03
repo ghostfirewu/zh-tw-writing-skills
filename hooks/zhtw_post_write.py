@@ -36,7 +36,7 @@ def main():
     if os.environ.get('ZHTW_GUARD_OFF') == '1':
         return 0
     try:
-        raw = sys.stdin.buffer.read().decode('utf-8', errors='replace').lstrip('﻿')
+        raw = sys.stdin.buffer.read().decode('utf-8', errors='replace').lstrip('\ufeff')
         data = json.loads(raw or '{}')
         tool_input = data.get('tool_input') or {}
         path = str(tool_input.get('file_path') or '')

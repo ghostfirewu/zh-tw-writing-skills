@@ -63,8 +63,56 @@ expect(code == 0, '中國用語不在 hook 範圍（留給 skill 看語境）')
 code, _ = run(b'not json')
 expect(code == 0, '壞 JSON 放行')
 
-code, _ = run('﻿{"tool_input": {"file_path": "a", "content": "这"}}'.encode('utf-8'))
+code, _ = run('\ufeff{"tool_input": {"file_path": "a", "content": "这"}}'.encode('utf-8'))
 expect(code == 2, '前置 BOM 的 JSON 照常解析')
+
+# ---- hooks/run.sh 選 Python 的方式 ----
+# Windows 的 python3／python 常是 Microsoft Store 的空殼別名：`command -v` 找得到，執行卻只印錯誤。
+# run.sh 要實際跑得起來才採用，跑不起來就換下一個；都不行就安靜放行（exit 0），不在每次寫檔時報錯。
+import shutil  # noqa: E402
+import stat  # noqa: E402
+import tempfile  # noqa: E402
+
+SH = shutil.which('sh')
+RUN_SH = os.path.join(ROOT, 'hooks', 'run.sh')
+
+
+def stub(dirpath, name, body):
+    p = os.path.join(dirpath, name)
+    with open(p, 'w', encoding='utf-8', newline='\n') as f:
+        f.write('#!/bin/sh\n' + body + '\n')
+    os.chmod(p, os.stat(p).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+
+def run_sh(stubs, payload):
+    with tempfile.TemporaryDirectory() as d:
+        for name, body in stubs.items():
+            stub(d, name, body)
+        env = dict(os.environ)
+        for k in ('ZHTW_GUARD_OFF', 'ZHTW_WRITING_DIR', 'CLAUDE_PROJECT_DIR'):
+            env.pop(k, None)
+        env['PATH'] = d + os.pathsep + env.get('PATH', '')
+        raw = json.dumps(payload, ensure_ascii=False).encode('utf-8')
+        p = subprocess.run([SH, RUN_SH], input=raw, capture_output=True, env=env)
+        return p.returncode, p.stderr.decode('utf-8', errors='replace')
+
+
+if SH is None:
+    print('  skip run.sh 測試（找不到 sh）')
+else:
+    real = sys.executable.replace('\\', '/')
+    broken = 'echo "Python was not found" >&2; exit 9009'
+    working = f'exec "{real}" "$@"'
+    simp = {'tool_name': 'Write', 'tool_input': {'file_path': '/p/a.md', 'content': '这个'}}
+
+    code, err = run_sh({'python3': broken, 'python': working}, simp)
+    expect(code == 2 and '这' in err, 'run.sh：python3 是跑不動的空殼 → 改用 python，照常提醒')
+
+    code, err = run_sh({'python3': broken, 'python': broken}, simp)
+    expect(code == 0 and 'not found' not in err, 'run.sh：兩個都跑不動 → 安靜放行，不把錯誤丟給使用者')
+
+    code, err = run_sh({'python3': working}, simp)
+    expect(code == 2 and '这' in err, 'run.sh：python3 正常 → 照常提醒（探測不吃掉 stdin）')
 
 print()
 if failures:
