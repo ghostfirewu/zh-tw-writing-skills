@@ -9,6 +9,7 @@ SUITES = [
     os.path.join(ROOT, 'tests', 'test_zhtw_check.py'),
     os.path.join(ROOT, 'tests', 'test_slop_scan.py'),
     os.path.join(ROOT, 'tests', 'test_hook.py'),
+    os.path.join(ROOT, 'tests', 'test_rewrite_diff.py'),
     os.path.join(KIT, 'test_all.py'),
     os.path.join(KIT, 'test_collate.py'),
     os.path.join(KIT, 'test_index.py'),

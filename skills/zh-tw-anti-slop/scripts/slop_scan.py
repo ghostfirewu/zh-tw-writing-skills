@@ -19,6 +19,7 @@ import json
 import os
 import re
 import sys
+import unicodedata
 from collections import Counter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -57,11 +58,88 @@ def strip_code(lines):
     return out
 
 
+BOLD_ADVICE = ('粗體不會生效，`**` 會原樣顯示。改法依序試：①括號整個包進粗體時，改成只包括號內側'
+               '（接著**「設定」**再 → 接著「**設定**」再）；②句末標點包進粗體時，把標點移到外面'
+               '（**必須。**詳見 → **必須**。詳見）；③都不行時，在 `**` 的外側加一個半形空格'
+               '（接著 **「設定」** 再）；加在內側反而會讓粗體失效')
+
+
+def _is_punct(ch):
+    return unicodedata.category(ch)[0] in 'PS'
+
+
+def _flanking(prev, nxt):
+    """CommonMark 的 left/right-flanking 判定；行首行尾視同空白。"""
+    p_ws = prev is None or prev.isspace()
+    n_ws = nxt is None or nxt.isspace()
+    p_pu = prev is not None and _is_punct(prev)
+    n_pu = nxt is not None and _is_punct(nxt)
+    left = not n_ws and (not n_pu or p_ws or p_pu)
+    right = not p_ws and (not p_pu or n_ws or n_pu)
+    return left, right
+
+
+def bold_issues(line):
+    """回傳這一行裡不會生效、且貼著中日韓文字或全形標點的 `**` 位置（0 起算）。只處理恰好兩個星號的符號串。"""
+    # 行內程式碼的內容換成字母、保留反引號（反引號本身算標點，會影響判定）
+    line = re.sub(r'`[^`\n]+`', lambda m: '`' + 'x' * (len(m.group()) - 2) + '`', line)
+    runs = [m for m in re.finditer(r'(?<!\\)\*+', line) if len(m.group()) == 2]
+    stack, bad = [], []
+    for m in runs:
+        s, e = m.span()
+        prev, nxt = (line[s - 1] if s else None), (line[e] if e < len(line) else None)
+        left, right = _flanking(prev, nxt)
+        if right and stack:
+            stack.pop()
+        elif left:
+            stack.append(s)
+        else:
+            bad.append(s)
+    # 只回報貼著中日韓文字或全形標點的 `**`：純英數旁的 `**` 多半是程式碼（x**2、5 ** 2），不是粗體
+    return sorted(p for p in bad + stack if _near_cjk(line, p))
+
+
+def _near_cjk(line, pos):
+    return any(0 <= i < len(line) and ord(line[i]) >= 0x2E80 and line[i] != '\n' for i in (pos - 1, pos + 2))
+
+
+def bold_hits(lines, stripped):
+    """以段落（連續的非空白、非程式碼區塊行）為單位配對 `**`，跨行的粗體也能正確配對。"""
+    hits, block = [], []
+
+    def flush():
+        if not block:
+            return
+        text = '\n'.join(lines[i] for i in block)
+        if '**' in text:
+            starts, pos = [], 0
+            for i in block:
+                starts.append(pos)
+                pos += len(lines[i]) + 1
+            for off in bold_issues(text):
+                k = max(j for j in range(len(block)) if starts[j] <= off)
+                no, col = block[k], off - starts[k]
+                if stripped[no][col:col + 2] == '**':   # 不在行內程式碼裡
+                    hits.append({'line': no + 1, 'col': col + 1, 'match': '**',
+                                 'category': 'Markdown・粗體失效', 'advice': BOLD_ADVICE})
+        block.clear()
+
+    for i, (orig, st) in enumerate(zip(lines, stripped)):
+        if orig.strip() and st.strip():
+            block.append(i)
+        else:
+            flush()
+    flush()
+    return hits
+
+
 def scan(text, patterns=None):
     patterns = patterns if patterns is not None else load_patterns()
     hits = []
     lines = text.split('\n')
-    for no, line in enumerate(strip_code(lines), 1):
+    stripped = strip_code(lines)
+    hits.extend(bold_hits(lines, stripped))
+    for no, line in enumerate(stripped, 1):
         taken = []
         for rx, cat, advice in patterns:
             for m in rx.finditer(line):
