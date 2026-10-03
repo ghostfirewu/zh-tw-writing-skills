@@ -3,7 +3,7 @@
 用法：
     python 稿件健檢.py 書稿.docx [書稿2.docx ...]
     python 稿件健檢.py 書稿.docx --只跑 標點 簡體
-    python 稿件健檢.py 書稿.docx --設定 另一份設定.ini --輸出 D:\\報表
+    python 稿件健檢.py 書稿.docx --設定 另一份設定.ini --輸出 報表資料夾
 
 也可以把 docx 拖放到「健檢.bat」上。
 項目：標點、簡體、罕用字、異形、結構、統計、外文、文獻

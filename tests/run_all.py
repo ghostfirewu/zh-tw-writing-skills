@@ -10,11 +10,16 @@ SUITES = [
     os.path.join(ROOT, 'tests', 'test_slop_scan.py'),
     os.path.join(ROOT, 'tests', 'test_hook.py'),
     os.path.join(ROOT, 'tests', 'test_rewrite_diff.py'),
+    os.path.join(ROOT, 'tests', 'test_overlay.py'),
+    os.path.join(ROOT, 'tests', 'test_privacy.py'),
+    os.path.join(ROOT, 'tests', 'test_meta.py'),
     os.path.join(KIT, 'test_all.py'),
     os.path.join(KIT, 'test_collate.py'),
     os.path.join(KIT, 'test_index.py'),
 ]
 env = dict(os.environ, PYTHONIOENCODING='utf-8')
+for k in ('ZHTW_WRITING_DIR', 'CLAUDE_PROJECT_DIR', 'ZHTW_GUARD_OFF'):
+    env.pop(k, None)   # 測試不受執行環境的專案設定影響
 failed = []
 for s in SUITES:
     p = subprocess.run([sys.executable, s], capture_output=True, env=env)

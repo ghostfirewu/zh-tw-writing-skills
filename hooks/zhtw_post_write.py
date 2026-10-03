@@ -4,6 +4,7 @@
 偵測不阻擋：檔案已經寫入，exit 2 只是把 stderr 餵回 Claude，讓它自己改正。
 只查高準確度的三類（簡體、一簡多繁、錯轉）；中國用語要看語境，留給 /zh-tw-guard skill 判斷。
 跳過：路徑含 zh-CN、zh_CN、zhcn、zh-Hans、zh-SG、zh-MY（不分大小寫）的簡體在地化檔；設了環境變數 ZHTW_GUARD_OFF=1。
+專案設定 .zh-tw-writing/allow.txt 的白名單（專名、地名）同樣適用，找法同 zhtw_check.py。
 任何解析失敗一律放行（exit 0），不干擾正常寫檔。
 """
 import importlib.util
@@ -47,7 +48,8 @@ def main():
         spec = importlib.util.spec_from_file_location('zhtw_check', CHECKER)
         zc = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(zc)
-        hits = zc.check_text(text, only=('簡體', '一簡多繁', '錯轉'))
+        config = zc.load_config(zc.find_config_dir(cwd=data.get('cwd')))
+        hits = zc.check_text(text, only=('簡體', '一簡多繁', '錯轉'), config=config)
     except Exception:
         return 0
     if not hits:

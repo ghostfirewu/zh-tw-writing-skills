@@ -21,9 +21,31 @@
 
 裝好後 skill 以 `/zh-tw-writing:zh-tw-guard` 這類名稱出現，Claude 也會在相關任務自動使用。要暫時關掉 hook，設環境變數 `ZHTW_GUARD_OFF=1`。
 
+**更新與鎖定版本**：
+- 自動更新預設關閉。要打開：`/plugin` → Marketplaces → 選 `zh-tw-writing-skills` → Enable auto-update。
+- 手動更新：`/plugin marketplace update zh-tw-writing-skills`，或在終端機執行 `claude plugin update zh-tw-writing@zh-tw-writing-skills`。
+- 想停在某一版：加入時在後面接標籤，例如 `/plugin marketplace add ghostfirewu/zh-tw-writing-skills#v1.2.0`。
+- 每一版改了什麼見 [`CHANGELOG.md`](CHANGELOG.md)。
+
 ### 其他支援 SKILL.md 的工具（claude.ai、其他 agent）
 
-每個 `skills/<名稱>/` 資料夾都是獨立的 skill，可以單獨取用：複製到該工具的 skills 目錄，或壓成 zip 上傳。腳本需要能執行 Python 的環境；hook 只在 Claude Code 有效。
+每個 `skills/<名稱>/` 資料夾都是獨立的 skill，可以單獨取用：複製到該工具的 skills 目錄，或壓成 zip 上傳。腳本需要能執行 Python 的環境；hook 只在 Claude Code 有效。這種裝法沒有自動更新，要自己重新下載或 `git pull`。
+
+### 接進自己的 agent 系統
+
+要讓自己的規則、Lint 或其他 AI 工具讀這裡的詞表與腳本，請看 [`docs/integration.md`](docs/integration.md)：怎麼鎖定版本、哪些檔案格式與參數可以放心依賴、升級時要注意什麼。
+
+## 個人化（不改 plugin 本身）
+
+在自己的專案裡放一個 `.zh-tw-writing/` 資料夾：
+
+| 檔案 | 作用 |
+|---|---|
+| `terms.tsv` | 追加中國用語，格式同 `skills/zh-tw-guard/data/terms.tsv` |
+| `slop.tsv` | 追加 AI 腔詞條，格式同 `skills/zh-tw-anti-slop/data/slop.tsv` |
+| `allow.txt` | 白名單，一行一個詞：品牌名、專名、地名，命中落在這些詞裡就不報 |
+
+兩支掃描器和 hook 都會自動讀這個資料夾，掃描結果倒數第二行會註明套用了多少設定（`--json` 不輸出這一行）。細節見 [`docs/integration.md`](docs/integration.md) 第 5 節。
 
 ## 需求
 
@@ -61,17 +83,11 @@ python3 稿件健檢.py 書稿.docx
 python3 tests/run_all.py
 ```
 
-七組測試：守門掃描器、AI 腔掃描器、改寫前後比對、hook、書稿健檢、排版比對、索引頁碼。GitHub Actions 在 Linux、Windows、macOS 上跑。
+十組測試：守門掃描器、AI 腔掃描器、改寫前後比對、hook、專案設定、個資檢查、發布一致性、書稿健檢、排版比對、索引頁碼。GitHub Actions 在 Linux、Windows、macOS 上跑。
 
 ## 貢獻
 
-詞表是最需要補的部分：
-
-- 中國用語：`skills/zh-tw-guard/data/terms.tsv` 加一列，並在 `skills/zh-tw-guard/references/terms.md` 對應的表補上同一個詞（測試會檢查兩邊一致）。B 級詞請附保留語境和排除詞。
-- 一簡多繁、錯轉繁：`skills/zh-tw-guard/data/` 的兩個清單，同步改 `skills/manuscript-check/scripts/設定/` 的同名檔（測試會檢查兩份一致）。
-- AI 腔：`skills/zh-tw-anti-slop/data/slop.tsv`。
-
-改完跑 `python3 tests/run_all.py`。
+歡迎發 PR，詞表是最需要補的部分。流程、詞表規則、版本號，以及哪些內容不能放進公開 repo，都寫在 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
 
 ## 授權
 

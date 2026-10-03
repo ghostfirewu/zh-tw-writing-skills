@@ -1,0 +1,40 @@
+name: release
+# main 上的 test 工作流程全部通過後，讀 plugin.json 的版本號；
+# 對應的 v<版本> 標籤還不存在就建立，已存在就略過。升版本號＝發布新版。
+on:
+  workflow_run:
+    workflows: [test]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - name: Create tag from plugin.json version
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          VERSION=$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json', encoding='utf-8'))['version'])")
+          TAG="v${VERSION}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "${TAG} already exists, skipping."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${TAG}" "${SHA}" -m "${TAG}"
+          git push origin "refs/tags/${TAG}"
+          echo "Created ${TAG} at ${SHA}"

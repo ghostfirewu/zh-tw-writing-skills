@@ -12,6 +12,8 @@ failures = []
 def run(payload, env_extra=None):
     env = dict(os.environ)
     env.pop('ZHTW_GUARD_OFF', None)
+    env.pop('ZHTW_WRITING_DIR', None)
+    env.pop('CLAUDE_PROJECT_DIR', None)
     env.update(env_extra or {})
     raw = payload if isinstance(payload, bytes) else json.dumps(payload, ensure_ascii=False).encode('utf-8')
     p = subprocess.run([sys.executable, HOOK], input=raw, capture_output=True, env=env)

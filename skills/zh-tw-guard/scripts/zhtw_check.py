@@ -8,10 +8,17 @@
     --only 簡體,錯轉                  只跑指定類別，逗號分隔（簡體／一簡多繁／錯轉／用語；預設全跑）
     --level A                         用語只報 A 級（安全直換）；預設 A、B 都報
     --json                            輸出 JSON（給程式或 AI 讀）
+    --config-dir 資料夾                指定專案設定資料夾（預設自動找 .zh-tw-writing/，見下）
+    --no-config                       不讀專案設定
 結束代碼：有「簡體／一簡多繁／錯轉／A 級用語」命中＝1；只有 B 級（看語境）或沒命中＝0；用法錯誤＝2。
 
 本工具只列「候選」，不改檔。B 級用語要看語境判斷（例：「程序」在「申請程序」裡是台灣正常用法）。
 Markdown 的程式碼區塊（``` 圍起來的段落與 `行內程式碼`）不查用語，但仍查簡體字。
+
+專案設定（不改本工具也能個人化）：在專案裡放一個 .zh-tw-writing/ 資料夾——
+    terms.tsv   追加或覆寫中國用語，格式同 data/terms.tsv
+    allow.txt   白名單，一行一個詞；命中落在這些詞裡就不報（專名、地名、引文）
+找資料夾的順序：--config-dir → 環境變數 ZHTW_WRITING_DIR → $CLAUDE_PROJECT_DIR/.zh-tw-writing → 目前目錄/.zh-tw-writing
 """
 import argparse
 import json
@@ -77,17 +84,62 @@ def misconversions():
     return tuple(read_list('錯轉.txt'))
 
 
-@lru_cache(None)
-def terms():
-    """[(詞, 建議, 級別, 排除詞, 說明)]，依詞長由長到短排序（先比長詞）。"""
+def parse_terms(lines):
     rows = []
-    for ln in read_list('terms.tsv'):
+    for ln in lines:
         f = ln.split('\t') + [''] * 5
         word, sug, level = f[0].strip(), f[1].strip(), f[2].strip().upper()
         if not word or level not in ('A', 'B'):
-            continue
+            continue   # 格式不對的列略過，不讓整支工具掛掉
         exc = [w for w in f[3].split('|') if w.strip()]
         rows.append((word, sug, level, exc, f[4].strip()))
+    return rows
+
+
+@lru_cache(None)
+def terms():
+    """內建用語表：[(詞, 建議, 級別, 排除詞, 說明)]，依詞長由長到短排序（先比長詞）。"""
+    rows = parse_terms(read_list('terms.tsv'))
+    rows.sort(key=lambda r: -len(r[0]))
+    return rows
+
+
+CONFIG_NAME = '.zh-tw-writing'
+
+
+def find_config_dir(explicit=None, cwd=None):
+    """找專案設定資料夾；找不到回 None。只看目前目錄，不往上層找。"""
+    cands = [explicit, os.environ.get('ZHTW_WRITING_DIR')]
+    if os.environ.get('CLAUDE_PROJECT_DIR'):
+        cands.append(os.path.join(os.environ['CLAUDE_PROJECT_DIR'], CONFIG_NAME))
+    cands.append(os.path.join(cwd or os.getcwd(), CONFIG_NAME))
+    for c in cands:
+        if c and os.path.isdir(c):
+            return c
+    return None
+
+
+def _read_user_list(path):
+    if not os.path.isfile(path):
+        return []
+    with open(path, encoding='utf-8-sig', errors='replace') as f:
+        return [ln.rstrip('\r\n') for ln in f if ln.strip() and not ln.startswith(("'", '#'))]
+
+
+def load_config(config_dir):
+    """讀專案設定：{'dir', 'terms'（追加的用語列）, 'allow'（白名單詞）}。"""
+    if not config_dir:
+        return None
+    return {'dir': config_dir,
+            'terms': parse_terms(_read_user_list(os.path.join(config_dir, 'terms.tsv'))),
+            'allow': [w.strip() for w in _read_user_list(os.path.join(config_dir, 'allow.txt')) if w.strip()]}
+
+
+def merged_terms(config):
+    if not config or not config['terms']:
+        return terms()
+    extra = {r[0]: r for r in config['terms']}
+    rows = [r for r in terms() if r[0] not in extra] + list(extra.values())
     rows.sort(key=lambda r: -len(r[0]))
     return rows
 
@@ -122,13 +174,16 @@ def code_mask(lines):
     return masks
 
 
-def check_text(text, only=CATEGORIES, level=('A', 'B')):
-    """回傳命中清單；每筆是 dict：line、col（從 1 起）、category、match、suggestion、level、note。"""
+def check_text(text, only=CATEGORIES, level=('A', 'B'), config=None, stats=None):
+    """回傳命中清單；每筆是 dict：line、col（從 1 起）、category、match、suggestion、level、note。
+    config＝load_config() 的結果；stats 若給 dict，會填入 'allowed'（被白名單略過的筆數）。"""
     hits = []
     lines = text.split('\n')
     masks = code_mask(lines) if '用語' in only else None
     gb_only = gb_only_chars()
     otm = one_to_many()
+    allow = config['allow'] if config else []
+    n_allowed = 0
     for ln_no, line in enumerate(lines, 1):
         def add(cat, s, e, sug='', lv='', note=''):
             hits.append({'line': ln_no, 'col': s + 1, 'category': cat, 'match': line[s:e],
@@ -160,16 +215,26 @@ def check_text(text, only=CATEGORIES, level=('A', 'B')):
         if '用語' in only:
             mask = masks[ln_no - 1]
             taken = [False] * len(line)
-            for word, sug, lv, exc, note in terms():
+            for word, sug, lv, exc, note in merged_terms(config):
                 i = line.find(word)
                 while i >= 0:
                     j = i + len(word)
-                    if not any(taken[i:j]) and not any(mask[i:j]):
+                    if allow and not any(taken[i:j]) and covered(line, i, j, allow):
+                        if lv in level and not any(mask[i:j]):
+                            n_allowed += 1   # 白名單：不報、也不占位；只計原本會報的
+                    elif not any(taken[i:j]) and not any(mask[i:j]):
                         for k in range(i, j):
                             taken[k] = True   # 長詞先占位，短詞不重複報
                         if lv in level and not covered(line, i, j, exc):
                             add('用語', i, j, sug, lv, note)
                     i = line.find(word, i + 1)
+    if allow:
+        kept = [h for h in hits
+                if not covered(lines[h['line'] - 1], h['col'] - 1, h['col'] - 1 + len(h['match']), allow)]
+        n_allowed += len(hits) - len(kept)
+        hits = kept
+    if stats is not None and allow:
+        stats['allowed'] = stats.get('allowed', 0) + n_allowed
     # 同一處只留一筆（簡體字可能同時被一簡多繁、用語抓到時各自保留，類別不同）
     seen, out = set(), []
     for h in sorted(hits, key=lambda h: (h['line'], h['col'], h['category'])):
@@ -208,8 +273,15 @@ def main(argv=None):
                     help='只跑指定類別，逗號分隔：' + ','.join(CATEGORIES))
     ap.add_argument('--level', choices=('A', 'B', 'all'), default='all')
     ap.add_argument('--json', action='store_true')
+    ap.add_argument('--config-dir', help='專案設定資料夾（預設自動找 .zh-tw-writing/）')
+    ap.add_argument('--no-config', action='store_true', help='不讀專案設定')
     args = ap.parse_args(argv)
     level = ('A', 'B') if args.level == 'all' else (args.level,)
+    if args.config_dir and not os.path.isdir(args.config_dir):
+        print(f'找不到設定資料夾：{args.config_dir}', file=sys.stderr)
+        return 2
+    config = None if args.no_config else load_config(find_config_dir(args.config_dir))
+    stats = {}
     for stream in (sys.stdout, sys.stderr):
         try:
             stream.reconfigure(encoding='utf-8')
@@ -229,7 +301,7 @@ def main(argv=None):
                 print(f'讀不到 {path}：{e}', file=sys.stderr)
                 return 2
             name = path
-        hits = check_text(text, tuple(args.only), level)
+        hits = check_text(text, tuple(args.only), level, config=config, stats=stats)
         results[name] = hits
         blocking = blocking or any(is_blocking(h) for h in hits)
 
@@ -241,6 +313,9 @@ def main(argv=None):
             for h in hits:
                 print(fmt(name, h))
             total += len(hits)
+        if config:
+            print(f"套用專案設定 {config['dir']}：追加 {len(config['terms'])} 條用語、"
+                  f"白名單 {len(config['allow'])} 條（本次略過 {stats.get('allowed', 0)} 筆）")
         print(f'共 {total} 筆候選' + ('（含需處理項，結束代碼 1）' if blocking else ''))
     return 1 if blocking else 0
 
