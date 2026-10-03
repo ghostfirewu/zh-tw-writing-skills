@@ -1,11 +1,19 @@
 name: release
-# main 上的 test 工作流程全部通過後，讀 plugin.json 的版本號；
-# 對應的 v<版本> 標籤還不存在就建立，已存在就略過。升版本號＝發布新版。
+# main 上的 test 工作流程全部通過後，讀 plugin.json 的版本號：
+#   1. v<版本> 標籤還不存在就建立；
+#   2. 這個標籤還沒有 GitHub Release 就建立，說明取自 CHANGELOG.md 對應的段落。
+# 已存在的就略過，所以重跑不會出錯。升版本號＝發布新版。
+# 也可以在 Actions 頁面手動執行（workflow_dispatch），替已經有標籤、但沒有 Release 的舊版補建 Release。
 on:
   workflow_run:
     workflows: [test]
     types: [completed]
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '要補建 Release 的版本號（例：1.2.0）；標籤必須已存在'
+        required: true
 
 permissions:
   contents: write
@@ -15,26 +23,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  tag:
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+  release:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
-      - name: Create tag from plugin.json version
+      - name: Create tag and release
         env:
-          SHA: ${{ github.event.workflow_run.head_sha }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
-          VERSION=$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json', encoding='utf-8'))['version'])")
+          set -euo pipefail
+          if [ -n "${INPUT_VERSION:-}" ]; then
+            VERSION="${INPUT_VERSION#v}"
+          else
+            VERSION=$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json', encoding='utf-8'))['version'])")
+          fi
           TAG="v${VERSION}"
+
           if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-            echo "${TAG} already exists, skipping."
+            echo "${TAG} already exists."
+          elif [ -n "${INPUT_VERSION:-}" ]; then
+            echo "::error::${TAG} does not exist; manual runs only add releases for existing tags."
+            exit 1
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "${TAG}" "${SHA}" -m "${TAG}"
+            git push origin "refs/tags/${TAG}"
+            echo "Created ${TAG} at ${SHA}"
+          fi
+
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists, skipping."
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${TAG}" "${SHA}" -m "${TAG}"
-          git push origin "refs/tags/${TAG}"
-          echo "Created ${TAG} at ${SHA}"
+          python3 .github/scripts/changelog_section.py "${VERSION}" > notes.md
+          gh release create "${TAG}" --verify-tag --title "${TAG}" --notes-file notes.md
+          echo "Created release ${TAG}"
