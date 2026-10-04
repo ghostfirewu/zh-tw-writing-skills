@@ -86,6 +86,8 @@ expect(zc.is_blocking({'category': '簡體', 'level': ''}) is True, '簡體字�
 
 # 跨詞誤判：「構建」不能命中「架構＋建議」
 expect(matches('附上書稿架構建議', '用語') == [], '排除詞：架構建議不報（架構＋建議）')
+for t in ('文章結構建議', '研究機構建立資料庫', '虛構建築', '解構建築'):
+    expect(matches(t, '用語') == [], f'排除詞：{t}不報（「構」屬前一個詞）')
 expect(matches('構建資料模型', '用語') == ['構建'], 'A 級：構建照報')
 
 # 兩份共用清單必須一致（manuscript-check 的設定檔是 zh-tw-guard 的複本）
