@@ -1,11 +1,12 @@
 # zh-tw-writing-skills
 
-繁體中文（台灣）寫作與編輯用的 AI agent skill。三支 skill 加一支 hook，針對 AI 寫繁中最常出的問題：簡體字殘留、中國用語、AI 腔，以及出版編輯的書稿檢查。
+繁體中文（台灣）寫作與編輯用的 AI agent skill。四支 skill 加一支 hook，針對 AI 寫繁中最常出的問題：簡體字殘留、中國用語、AI 腔，以及出版編輯的書稿檢查；另有選用的個人口吻模組。
 
 | Skill | 做什麼 | 例 |
 |---|---|---|
 | [`zh-tw-guard`](skills/zh-tw-guard/SKILL.md) | 繁中守門：簡體字、一簡多繁、錯轉繁、中國用語 | 这个→這個、以后→以後、頭發→頭髮、視頻→影片；「申請程序」「質量守恆」**不改** |
 | [`zh-tw-anti-slop`](skills/zh-tw-anti-slop/SKILL.md) | 去 AI 腔：灌水詞、墊片詞、二元對比、翻譯腔、擬人、強制昇華結尾、聊天殘渣、Markdown 排版痕跡；並守住改寫紀律（不加料、不改語氣強度、不改過頭） | 「數據告訴我們」→「從數據看得出」；「在學習的過程中」→「學習時」；改寫後多出原文沒有的數字會被比對腳本抓出來 |
+| [`zh-tw-voice`](skills/zh-tw-voice/SKILL.md)（選用） | 個人口吻：動筆前先訪談作者要具體內容；從使用者自己的貼文萃取寫作習慣存成風格檔，社群貼文照習慣寫，正式文案只保留身分特徵、收掉口語並補強結構 | 作者平常每千字 3 個語氣詞，草稿寫到 10 個會被對照腳本抓出來；報告裡出現「啦」「！」也會 |
 | [`manuscript-check`](skills/manuscript-check/SKILL.md) | 書稿規則式檢查（不用 AI）：Word 稿健檢、定稿與排版 PDF 逐字比對、索引頁碼 | 標點不成對、圖表編號跳號、引用與書目對不上、排版漏段 |
 
 **Hook**（僅 Claude Code）：每次 Write／Edit 寫入新內容後，自動掃簡體字、一簡多繁、錯轉繁，有命中就提醒 Claude 修正。只提醒、不擋寫入；路徑含 `zh-CN`、`zh_Hans`、`zh-SG` 這類簡體在地化標記的檔案自動跳過。
@@ -44,12 +45,13 @@
 | `terms.tsv` | 追加中國用語，格式同 `skills/zh-tw-guard/data/terms.tsv` |
 | `slop.tsv` | 追加 AI 腔詞條，格式同 `skills/zh-tw-anti-slop/data/slop.tsv` |
 | `allow.txt` | 白名單，一行一個詞：品牌名、專名、地名，命中落在這些詞裡就不報 |
+| `voice.json`、`voice.md` | 個人風格檔，由 `zh-tw-voice` 建立（選用）；內容是個人資料，公開的專案請加進 `.gitignore` |
 
 兩支掃描器和 hook 都會自動讀這個資料夾，掃描結果倒數第二行會註明套用了多少設定（`--json` 不輸出這一行）。細節見 [`docs/integration.md`](docs/integration.md) 第 5 節。
 
 ## 需求
 
-- **Python 3.8 以上**。`zh-tw-guard`、`zh-tw-anti-slop` 的腳本只用標準函式庫。
+- **Python 3.8 以上**。`zh-tw-guard`、`zh-tw-anti-slop`、`zh-tw-voice` 的腳本只用標準函式庫。
 - `manuscript-check` 另需四個套件：
   ```
   pip install -r skills/manuscript-check/scripts/requirements.txt
@@ -70,6 +72,10 @@ python3 skills/zh-tw-anti-slop/scripts/slop_scan.py --summary 第*.md
 # 改寫前後比對：抓改寫時多出來或不見的數字、專名、引語，以及語氣強度的變化
 python3 skills/zh-tw-anti-slop/scripts/rewrite_diff.py 原文.md 改寫後.md
 
+# 個人口吻：從自己的貼文建風格檔，再拿草稿對照
+python3 skills/zh-tw-voice/scripts/voice_profile.py --out .zh-tw-writing/voice.json 貼文*.md
+python3 skills/zh-tw-voice/scripts/voice_check.py --register 社群 草稿.md
+
 # 書稿健檢（輸出 Excel 報表）
 cd skills/manuscript-check/scripts
 python3 稿件健檢.py 書稿.docx
@@ -83,7 +89,7 @@ python3 稿件健檢.py 書稿.docx
 python3 tests/run_all.py
 ```
 
-十組測試：守門掃描器、AI 腔掃描器、改寫前後比對、hook、專案設定、個資檢查、發布一致性、書稿健檢、排版比對、索引頁碼。GitHub Actions 在 Linux、Windows、macOS 上跑。
+十一組測試：守門掃描器、AI 腔掃描器、改寫前後比對、個人口吻、hook、專案設定、個資檢查、發布一致性、書稿健檢、排版比對、索引頁碼。GitHub Actions 在 Linux、Windows、macOS 上跑。
 
 ## 貢獻
 
