@@ -31,7 +31,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SLOP_SCAN = os.path.join(HERE, '..', '..', 'zh-tw-anti-slop', 'scripts', 'slop_scan.py')
 
 MIN_CHARS, MIN_DOCS = 3000, 5          # 低於此，統計多半是雜訊，信心標「低」
-DEFAULT_LONG = 80                       # 沒有風格檔時的長句上限
+DEFAULT_LONG = 100                      # 沒有風格檔時的長句上限
 
 # 口語語氣詞：後面不接漢字才算（排除吧台、耶穌、好啦好啦的第一個）；「欸」幾乎只當感嘆詞，出現就算
 PARTICLE = re.compile(r'欸|(?<![酒網貼])(?:啦|吧|耶|喔|嘛|齁|啊|哦|囉|唷|咧)(?![一-鿿])')
