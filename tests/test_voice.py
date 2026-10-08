@@ -61,6 +61,16 @@ long_line = '這個計畫' + '，然後我們又' * 15 + '。短句。'
 lng = vc.long_sentences(long_line, 80)
 expect(len(lng) == 1 and lng[0]['字數'] > 80, '一逗到底的長句被抓出來')
 
+# 段落：沒有空行分段時（直接貼上的文字常見），改用換行分段；標題行不算句子也不算段落
+ps = vp.paragraphs('# 標題\n第一段第一句。第一段第二句。\n第二段。\n第三段。')
+expect(len(ps) == 3, f'沒有空行時以換行分段，標題不算（得到 {len(ps)} 段）')
+ps = vp.paragraphs('第一段第一行\n第一段第二行。\n\n第二段。')
+expect(len(ps) == 2, f'有空行時照空行分段（得到 {len(ps)} 段）')
+expect(vp.sentences('# 關於 LLM\n正文。') == ['正文'], '標題行不算句子')
+# 句長：一個英文詞算一個字（LLM、confabulation 不該把句子撐長）
+expect(vp.sentences('LLM 以 confabulation 為例。') == ['LLM以confabulation為例']
+       and vp.sent_len('LLM以confabulation為例') == 5, '句長：英文詞算一個字')
+
 # ── 建檔 ──
 d = tempfile.mkdtemp()
 casual = '欸今天去吃那家拉麵啦，排了超久～不過真的好吃！！下次再來吧。\n\n老闆人超好，還多給一顆蛋 😆\n'

@@ -68,8 +68,9 @@ def long_sentences(text, limit):
     out = []
     for no, line in enumerate(text.split('\n'), 1):
         for s in vp.sentences(line):
-            if len(s) > limit:
-                out.append({'行': no, '字數': len(s), '開頭': s[:15]})
+            n = vp.sent_len(s)
+            if n > limit:
+                out.append({'行': no, '字數': n, '開頭': s[:15]})
     return out
 
 

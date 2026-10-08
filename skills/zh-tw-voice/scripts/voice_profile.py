@@ -57,6 +57,11 @@ def clean(text):
     return strip_code(text).replace('**', '').replace('__', '')
 
 
+def drop_headings(text):
+    """Markdown 標題行（# 開頭）不算句子、不算段落。"""
+    return re.sub(r'(?m)^[ \t]*#{1,6}[ \t].*$', '', text)
+
+
 def char_count(text):
     return sum(1 for ch in text if not ch.isspace())
 
@@ -75,15 +80,25 @@ def counts(text):
 def sentences(text):
     """斷句後的句子（去掉空白，不含句末標點）。"""
     out = []
-    for s in SENT_END.split(clean(text)):
+    for s in SENT_END.split(drop_headings(clean(text))):
         s = ''.join(s.split())
         if s:
             out.append(s)
     return out
 
 
+def sent_len(s):
+    """句長：一個英文詞算一個字（LLM、confabulation 不該把句子撐長）。"""
+    return len(LATIN.sub('A', s))
+
+
 def paragraphs(text):
-    return [p for p in re.split(r'\n\s*\n', clean(text)) if p.strip()]
+    """有空行就照空行分段；整篇沒有空行（直接貼上的文字常見）就照換行分段。"""
+    t = drop_headings(clean(text)).strip()
+    blocks = [p for p in re.split(r'\n\s*\n', t) if p.strip()]
+    if len(blocks) <= 1:
+        blocks = [p for p in t.split('\n') if p.strip()]
+    return blocks
 
 
 def per_k(n, chars):
@@ -142,7 +157,7 @@ def build(texts, names=None, phrases=None):
             selfc[k] += len(re.findall(pat, t))
         for p in phr:
             phr[p] += t.count(p)
-        sent_lens += [len(s) for s in sentences(text)]
+        sent_lens += [sent_len(s) for s in sentences(text)]
         para_lens += [char_count(p) for p in paragraphs(text)]
         dens, sus = slop_density(text)
         detail.append({'檔名': os.path.basename(name), '字數': n, 'AI腔每千字': dens, '疑似AI腔': sus})
