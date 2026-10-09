@@ -54,6 +54,19 @@ expect(c['emoji'] == 2, f"emoji 計數（得到 {c['emoji']}）")
 c = vp.counts('程式碼不算：`好啦！`\n```\n真的啦！！\n```\n正文。')
 expect(c['語氣詞'] == 0 and c['驚嘆號'] == 0, '程式碼區塊與行內程式碼不計')
 
+# 網址不算字數、不算英文詞、不算句子
+c = vp.counts('影片在這 https://www.example.com/watch?v=abc123 ，很好看。')
+expect(c['英文詞'] == 0, f"網址不算英文詞（得到 {c['英文詞']}）")
+expect(vp.char_count(vp.clean('看這裡 https://example.com/a/b/c')) == 3, '網址不算字數')
+expect(vp.sentences('第一句。\nhttps://example.com/x\n第二句。') == ['第一句', '第二句'], '單獨一行的網址不算句子')
+# 網路用語（XD、lol、哈哈）另外算，不混進英文詞；正式模式一出現就報
+c = vp.counts('結果附上了航班資訊 XD 我笑了 lol 哈哈哈')
+expect(c['網路用語'] == 3 and c['英文詞'] == 0, f"網路用語：XD、lol、哈哈哈（得到 {c}）")
+c = vp.counts('XDR 規格、Lolita 時裝、哈密瓜')
+expect(c['網路用語'] == 0, f"字面義不算網路用語：XDR、Lolita、哈密瓜（得到 {c['網路用語']}）")
+r = vc.check('本季營收成長，主因是新客戶增加 XD', None, '正式')
+expect(any(x['項目'] == '網路用語' for x in r['超出']), '正式：網路用語一出現就報')
+
 # ── 句長與長句 ──
 s = vp.sentences('第一句很短。第二句也短！\n\n第三句？')
 expect([len(x) for x in s] == [5, 5, 3], f'斷句：句號、驚嘆號、問號、換行（得到 {s}）')
@@ -130,6 +143,15 @@ r = vc.check(flat, saved, '社群')
 expect(not r['超出'] and any(x['項目'] == '語氣詞' for x in r['偏少']), '社群：完全沒有語氣詞 → 只列偏少，不算超出')
 r = vc.check('說真的，說真的，說真的，這很難。', prof2, '社群')
 expect(any(x['項目'] == '口頭禪：說真的' for x in r['超出']), '社群：口頭禪塞太多 → 超出')
+
+# 短貼文不要太敏感：習慣頻率的 1.5 倍之外，再留 2 次的餘裕；英文詞跟著主題走，不判斷超出
+zero = {'每千字': {'emoji': 0.0, '英文詞': 0.0}, '口頭禪': {}, '長句上限': 80}
+r = vc.check('今天出門 😆 天氣很好 😆', zero, '社群')
+expect(not r['超出'], '社群：平常不用 emoji，短文用 2 個 → 還在餘裕內')
+r = vc.check('今天出門 😆 天氣很好 😆 晚餐也好吃 😆', zero, '社群')
+expect(any(x['項目'] == 'emoji' for x in r['超出']), '社群：平常不用 emoji，短文用 3 個 → 超出')
+r = vc.check('Claude 的課程可以在 LinkedIn 登錄，不曉得為什麼 Google 不做', zero, '社群')
+expect(not r['超出'] and not r['偏少'], '社群：英文詞（產品名）不判斷超出或偏少')
 
 # ── 成品對照：正式 ──
 r = vc.check('本季營收成長，主因是新客戶增加啦！', saved, '正式')

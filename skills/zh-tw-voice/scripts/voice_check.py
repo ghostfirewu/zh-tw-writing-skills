@@ -13,10 +13,11 @@
 結束代碼：有「超出」或「長句」＝1，沒有＝0，用法錯誤或社群模式找不到風格檔＝2。
 
 兩種場合：
-  社群  某項特徵比使用者的習慣多太多（超過習慣頻率的 1.5 倍，且至少 2 次）→ 超出。
+  社群  某項特徵比使用者的習慣多太多（超過習慣頻率的 1.5 倍再多 2 次）→ 超出。
+        短貼文裡差一兩次是正常波動，所以留 2 次餘裕。英文詞跟著主題走（產品名、人名），只記錄不判斷。
         例：作者平均一篇用一次「說真的」，草稿出現五次就會被抓。
         習慣上常用、草稿卻完全沒有的，列在「偏少」，只供參考，不影響結束代碼。
-  正式  口語特徵（語氣詞、驚嘆號、波浪號、emoji）出現就列為超出，不看習慣；沒有風格檔也能跑。
+  正式  口語特徵（語氣詞、驚嘆號、波浪號、emoji、網路用語）出現就列為超出，不看習慣；沒有風格檔也能跑。
 兩種場合都會列出超過長句上限的句子（風格檔的「長句上限」，沒有風格檔時 100 字）。
 
 這是篩選器：只看得到數得出來的特徵。像不像本人，最後還是要讀過才知道。
@@ -38,13 +39,16 @@ _spec.loader.exec_module(vp)
 
 CONFIG_NAME = '.zh-tw-writing'
 REGISTERS = ('社群', '正式')
-COLLOQUIAL = ('語氣詞', '驚嘆號', '波浪號', 'emoji')   # 正式場合一出現就報
+COLLOQUIAL = ('語氣詞', '驚嘆號', '波浪號', 'emoji', '網路用語')   # 正式場合一出現就報
 TOLERANCE = 1.5
+SLACK = 2                 # 特徵的餘裕次數；口頭禪不給餘裕
+TOPICAL = ('英文詞',)      # 跟著主題走，不判斷超出或偏少
 NOTES = {
     '語氣詞': '口語語氣詞（啦、吧、欸、喔……）',
     '驚嘆號': '驚嘆號',
     '波浪號': '波浪號',
     'emoji': 'emoji',
+    '網路用語': '網路用語（XD、lol、哈哈）',
     '刪節號': '刪節號',
     '破折號': '破折號',
     '問號': '問號',
@@ -74,8 +78,8 @@ def long_sentences(text, limit):
     return out
 
 
-def _allowed(rate, chars):
-    return max(1, math.ceil(rate * chars / 1000 * TOLERANCE))
+def _allowed(rate, chars, slack=0):
+    return max(1, math.ceil(rate * chars / 1000 * TOLERANCE + slack))
 
 
 def check(text, profile, register):
@@ -90,8 +94,10 @@ def check(text, profile, register):
                 over.append({'項目': k, '草稿': c[k], '上限': 0, '說明': f'{NOTES[k]}不適合正式文體'})
     else:
         for k, n in c.items():
+            if k in TOPICAL:
+                continue
             rate = rates.get(k, 0)
-            lim = _allowed(rate, chars)
+            lim = _allowed(rate, chars, SLACK)
             if n >= 2 and n > lim:
                 over.append({'項目': k, '草稿': n, '上限': lim,
                              '說明': f'{NOTES.get(k, k)}比平常多：習慣每千字 {rate}，這篇約 {per(n, chars)}'})

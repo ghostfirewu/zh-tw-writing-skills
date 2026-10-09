@@ -13,8 +13,8 @@
     --split     以單獨一行的 --- 分篇
 結束代碼：成功＝0，用法錯誤或讀不到檔案＝2。
 
-算的東西：句長與段落長、每千字的語氣詞／驚嘆號／問號／刪節號／破折號／波浪號／emoji／英文詞、
-自稱方式、指定口頭禪的頻率。幽默、立場、比喻這些質性特徵算不出來，由 agent 讀樣本後寫進 voice.md。
+算的東西：句長與段落長、每千字的語氣詞／驚嘆號／問號／刪節號／破折號／波浪號／emoji／網路用語（XD、lol、哈哈）／英文詞、
+自稱方式、指定口頭禪的頻率。網址不算字數。幽默、立場、比喻這些質性特徵算不出來，由 agent 讀樣本後寫進 voice.md。
 
 裝了 zh-tw-anti-slop 時，會順便算每篇樣本的 AI 腔密度，偏高的標「疑似AI腔」：
 那篇可能有 AI 代筆，學進去會把 AI 腔當成個人風格。只標不刪，要不要排除由人決定。
@@ -42,6 +42,9 @@ PUNCT = {
     '破折號': re.compile(r'—+|─{2,}'),
     '波浪號': re.compile(r'～+|~+'),
 }
+URL = re.compile(r'(?:https?://|www\.)[^\s）)」』，。]+')
+# 網路用語：XD、lol、哈哈、orz；前後不接英數，避免 XDR、Lolita
+NETSPEAK = re.compile(r'(?<![A-Za-z0-9])(?:XD+|xD+|lol|LOL|orz|OTZ)(?![A-Za-z0-9])|哈{2,}')
 EMOJI = re.compile('[\U0001F300-\U0001FAFF☀-➿]')
 LATIN = re.compile(r'[A-Za-z][A-Za-z0-9_.+#/-]*[A-Za-z0-9]|[A-Za-z]')
 SELF = {'我': r'我(?!們)', '我們': r'我們', '筆者': r'筆者', '本人': r'本人', '小編': r'小編'}
@@ -54,7 +57,8 @@ def strip_code(text):
 
 
 def clean(text):
-    return strip_code(text).replace('**', '').replace('__', '')
+    """去掉程式碼、網址與 Markdown 粗體記號。"""
+    return URL.sub(' ', strip_code(text)).replace('**', '').replace('__', '')
 
 
 def drop_headings(text):
@@ -73,7 +77,8 @@ def counts(text):
     for k, rx in PUNCT.items():
         c[k] = len(rx.findall(t))
     c['emoji'] = len(EMOJI.findall(t))
-    c['英文詞'] = len(LATIN.findall(t))
+    c['網路用語'] = len(NETSPEAK.findall(t))
+    c['英文詞'] = len(LATIN.findall(NETSPEAK.sub(' ', t)))
     return c
 
 
@@ -140,7 +145,7 @@ def slop_density(text):
 def build(texts, names=None, phrases=None):
     """texts：每篇樣本的全文；names：對應的檔名（只存檔名，不存路徑）。"""
     names = names or [f'樣本{i + 1}' for i in range(len(texts))]
-    total = {k: 0 for k in ['語氣詞'] + list(PUNCT) + ['emoji', '英文詞']}
+    total = {k: 0 for k in ['語氣詞'] + list(PUNCT) + ['emoji', '網路用語', '英文詞']}
     parts, sent_lens, para_lens, detail = {}, [], [], []
     selfc = {k: 0 for k in SELF}
     phr = {p: 0 for p in (phrases or [])}
