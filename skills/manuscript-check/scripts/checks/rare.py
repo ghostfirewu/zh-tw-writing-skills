@@ -9,7 +9,7 @@ from collections import OrderedDict
 from functools import lru_cache
 
 from .common import Hit, Result
-from .simplified import gb_only_chars
+from .simplified import gb_only_chars, taiwan_chars
 
 
 @lru_cache(None)
@@ -52,7 +52,7 @@ def _skip(ch):
 def run(doc, cfg):
     res = Result('⑩ 罕用字')
     big5 = big5_chars()
-    gb_only = gb_only_chars()
+    gb_only = gb_only_chars() - taiwan_chars(cfg)
     found = OrderedDict()   # 字 -> [次數, 首見段落, 位置]
     for p in doc.paras:
         for i, ch in enumerate(p.text):

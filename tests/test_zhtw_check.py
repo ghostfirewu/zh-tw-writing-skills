@@ -26,6 +26,9 @@ def matches(text, cat=None, **kw):
 expect(len(zc.gb_only_chars()) == 2380, 'GB2312 有、Big5 無的漢字共 2380 個')
 expect(matches('这个东西', '簡體') == ['这', '个', '东'], '抓到簡體字（这个东）')
 expect(matches('這個東西很好', '簡體') == [], '正體字不誤報')
+for txt in ('酶的活性', '多肽鏈', '苷類', '吲哚', '萘', '呋喃', '喹啉', '苯醌', '尿素又稱脲'):
+    expect(matches(txt, '簡體') == [], f'台灣正字（Big5 未收）不算簡體：{txt}')
+expect(not (zc.taiwan_chars() & set('这个东着叶广')), '台灣正字清單不含簡體字與異體字（这个东着叶广）')
 
 # 一簡多繁
 expect(matches('我們以后再說', '一簡多繁') == ['以后'], '一簡多繁：以后')
@@ -116,7 +119,7 @@ for txt, word in (('刷新網頁', '刷新'), ('激活帳號', '激活'), ('寫�
     expect([h['match'] for h in hits] == [word] and hits[0]['level'] == 'B', f'B 級：{word}')
 
 # 兩份共用清單必須一致（manuscript-check 的設定檔是 zh-tw-guard 的複本）
-for name in ('一簡多繁.txt', '錯轉.txt'):
+for name in ('一簡多繁.txt', '錯轉.txt', '台灣正字.txt'):
     a = open(os.path.join(ROOT, 'skills', 'zh-tw-guard', 'data', name), encoding='utf-8-sig').read()
     b = open(os.path.join(ROOT, 'skills', 'manuscript-check', 'scripts', '設定', name), encoding='utf-8-sig').read()
     expect(a == b, f'{name} 兩份一致（zh-tw-guard/data 與 manuscript-check/scripts/設定）')

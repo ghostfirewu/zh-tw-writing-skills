@@ -24,7 +24,7 @@
 2. **記錄鎖定資訊**：標籤、commit、每個檔案的雜湊。之後比對雜湊，就能發現副本有沒有被手改。
 3. **升級前先讀 `CHANGELOG.md`**：標「不相容」的條目代表第 4 節的介面變了，自己的 Lint 或腳本可能要跟著改。
 4. **升級後跑測試**：`python3 tests/run_all.py`。需要書稿工具包的話，先安裝 `skills/manuscript-check/scripts/requirements.txt`。
-5. **只拿需要的部分**：四支 skill 各自獨立，可以只取其中一支（`zh-tw-voice` 和 `zh-tw-anti-slop` 放在同一層時，會順便檢查樣本的 AI 腔密度；沒有也能跑）。`zh-tw-guard` 的 `data/一簡多繁.txt`、`data/錯轉.txt` 和 `manuscript-check/scripts/設定/` 裡的同名檔是同一份內容，只取書稿工具包時，用的是後者。
+5. **只拿需要的部分**：四支 skill 各自獨立，可以只取其中一支（`zh-tw-voice` 和 `zh-tw-anti-slop` 放在同一層時，會順便檢查樣本的 AI 腔密度；沒有也能跑）。`zh-tw-guard` 的 `data/一簡多繁.txt`、`data/錯轉.txt`、`data/台灣正字.txt` 和 `manuscript-check/scripts/設定/` 裡的同名檔是同一份內容，只取書稿工具包時，用的是後者。
 
 ## 4. 可以依賴的介面
 
@@ -36,7 +36,7 @@
 |---|---|
 | `skills/<名稱>/SKILL.md` | 四支 skill 的入口：`zh-tw-guard`、`zh-tw-anti-slop`、`zh-tw-voice`、`manuscript-check` |
 | `skills/zh-tw-guard/data/terms.tsv` | 中國用語表 |
-| `skills/zh-tw-guard/data/一簡多繁.txt`、`錯轉.txt` | 字形清單 |
+| `skills/zh-tw-guard/data/一簡多繁.txt`、`錯轉.txt`、`台灣正字.txt` | 字形清單 |
 | `skills/zh-tw-anti-slop/data/slop.tsv` | AI 腔詞條 |
 | `skills/*/scripts/*.py` | 掃描腳本（參數見下）|
 | `hooks/hooks.json`、`hooks/run.sh`、`hooks/zhtw_post_write.py` | 寫檔後的簡體提醒（`hooks.json` 透過 `run.sh` 找 Python 執行 `zhtw_post_write.py`）|
@@ -49,6 +49,7 @@
 | `slop.tsv` | 樣式（`re:` 開頭為正規表示式，否則照字面）、類別、改寫方向 |
 | `一簡多繁.txt` | 逗號分隔：字、可疑二字組（`\|` 分隔）、排除詞（`\|` 分隔，可省略）；`'` 開頭為註解 |
 | `錯轉.txt` | 一行一個詞；`'` 開頭為註解 |
+| `台灣正字.txt` | 一行一個字，Tab 後可加說明；`'` 開頭為註解。列出的字不算簡體字（標準 Big5 沒收、但台灣正式使用，例：酶、肽）|
 
 > **詞表的增刪都算次版號**（包括新增、刪除詞條，以及把詞條改成 A 級或 B 級），不是不相容變更；但你的 Lint 可能多出或少了命中，改級別還會改變 `zhtw_check.py` 的結束代碼。升級時留意 `CHANGELOG.md` 的「詞表」段，影響結束代碼的會另外註明。
 

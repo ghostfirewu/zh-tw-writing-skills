@@ -65,6 +65,12 @@ expect(count(r.hits, '一簡多繁字組', '以后') == 2, '「以后」2 處（
 expect(has(r.hits, '一簡多繁字組', '以后', part='註腳'), '「以后」在註腳的那處標為註腳')
 expect(has(r.hits, '錯轉繁', '頭發'), '錯轉繁「頭發」')
 
+fake = docx_text.Doc('x', [docx_text.Para('內文', 1, '酶與多肽；这', 'Normal', None, False, '章')])
+r = simplified.run(fake, cfg)
+expect([h.match for h in r.hits if h.category == '簡體字'] == ['这'], '台灣正字（酶、肽）不算簡體，这照報')
+r = rare.run(fake, cfg)
+expect(has(r.hits, '漢字（基本區）', '酶') and '也是簡體字' not in next(h.note for h in r.hits if h.match == '酶'), '罕用字照列「酶」，但不註「也是簡體字」')
+
 print('[排除詞與白名單長詞]')
 fake = docx_text.Doc('x', [docx_text.Para('內文', 1, '分成若干部分，干部開會；管理理論與我的的書。', 'Normal', None, False, '章')])
 r = simplified.run(fake, cfg)

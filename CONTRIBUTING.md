@@ -17,7 +17,7 @@
 - **中國用語**：`skills/zh-tw-guard/data/terms.tsv` 加一列，同時把同一個詞補進 `references/terms.md` 對應的表（測試會比對兩邊）。
   - B 級（看語境）詞一定要寫保留語境，能列排除詞就列。
   - 加詞前先想：這個詞在台灣有沒有正常用法？有就是 B 級，或乾脆不收。例：「土豆」在台灣多指花生。
-- **一簡多繁、錯轉**：改 `skills/zh-tw-guard/data/` 的清單時，`skills/manuscript-check/scripts/設定/` 的同名檔要一起改（測試會比對兩份）。
+- **一簡多繁、錯轉、台灣正字**：改 `skills/zh-tw-guard/data/` 的清單時，`skills/manuscript-check/scripts/設定/` 的同名檔要一起改（測試會比對兩份）。台灣正字只收台灣學術名詞或辭典用的正字，簡體字（酰，台灣作醯）、異體字（着，台灣作著）不收。
 - **AI 腔**：`skills/zh-tw-anti-slop/data/slop.tsv`。
   - 字面義、慣用語不收，例如「落地窗」「歷史告訴我們」。判斷方法：AI 普及以前的人類文章也常見，就不要收。
   - 新詞條在 `tests/test_slop_scan.py` 補一條會命中、一條不該命中的測試。

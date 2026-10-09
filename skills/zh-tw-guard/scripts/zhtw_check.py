@@ -61,6 +61,18 @@ def gb_only_chars():
     return frozenset(c for c in gb - big5 if is_cjk(c))
 
 
+@lru_cache(None)
+def taiwan_chars():
+    """data/台灣正字.txt：標準 Big5 沒收、但台灣正式使用的字（酶、肽……），不算簡體。"""
+    return frozenset(ln.split('\t')[0].strip() for ln in read_list('台灣正字.txt') if ln.strip())
+
+
+@lru_cache(None)
+def simplified_chars():
+    """簡體字候選：GB2312 有、Big5 無，扣掉台灣正字。"""
+    return gb_only_chars() - taiwan_chars()
+
+
 def read_list(name):
     path = os.path.join(DATA, name)
     with open(path, encoding='utf-8-sig') as f:
@@ -180,7 +192,7 @@ def check_text(text, only=CATEGORIES, level=('A', 'B'), config=None, stats=None)
     hits = []
     lines = text.split('\n')
     masks = code_mask(lines) if '用語' in only else None
-    gb_only = gb_only_chars()
+    gb_only = simplified_chars()
     otm = one_to_many()
     allow = config['allow'] if config else []
     n_allowed = 0
