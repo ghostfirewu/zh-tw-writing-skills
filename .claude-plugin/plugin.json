@@ -1,7 +1,7 @@
 {
   "name": "zh-tw-writing",
   "displayName": "繁中寫作工具組（zh-TW Writing）",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "繁體中文（台灣）寫作與編輯工具：簡體殘留與中國用語守門、AI 腔過濾、選用的個人口吻模組、書稿規則式檢查；附寫檔後自動掃簡體的 hook。",
   "author": { "name": "ghostfirewu", "url": "https://github.com/ghostfirewu" },
   "homepage": "https://github.com/ghostfirewu/zh-tw-writing-skills",

@@ -90,6 +90,31 @@ for t in ('文章結構建議', '研究機構建立資料庫', '虛構建築', '
     expect(matches(t, '用語') == [], f'排除詞：{t}不報（「構」屬前一個詞）')
 expect(matches('構建資料模型', '用語') == ['構建'], 'A 級：構建照報')
 
+# D 組：長詞修正既有短詞的錯誤替換
+for txt, want in (('買了一台打印機', '印表機'), ('打視頻電話', '視訊電話'), ('搭公交車', '公車')):
+    hits = zc.check_text(txt, only=('用語',))
+    expect(len(hits) == 1 and hits[0]['suggestion'] == want, f'長詞優先：{txt} → {want}（只報一次）')
+
+# D 組：A 級照報
+for txt, word in (('清一下緩存', '緩存'), ('這顆芯片', '芯片'), ('開了三個線程', '線程'),
+                  ('寫個博客', '博客'), ('洗髮水用完了', '洗髮水'), ('分泌信息素', '信息素'),
+                  ('雜誌的流媒體專欄', '流媒體'), ('拿手電照一下', '手電')):
+    expect(matches(txt, '用語') == [word], f'A 級：{word}')
+sug = {h['match']: h['suggestion'] for h in zc.check_text('信息素', only=('用語',))}
+expect(sug.get('信息素') == '費洛蒙', '長詞優先：信息素 → 費洛蒙（不是資訊素）')
+
+# D 組：台灣正常用法不誤報（跨詞界）
+for txt in ('主流媒體', '明顯存在', '公文檔案', '數字符號', '數字符合', '博客來', '安全屏障',
+            '我們上網吧', '打包郵寄', '重返現場', '自動檔案', '日系專門店', '手電筒', '致死機率',
+            '刷新紀錄', '和平進程', '檢查項目', '來回車資', '小區域', '自帶便當', '新建大樓',
+            '收集成冊', '登錄資料', '列車間距', '日常量測', '確實時常', '換成具體事實時', '其實時間不夠', '加快進度', '結合同學'):
+    expect(matches(txt, '用語') == [], f'不誤報：{txt}')
+
+# D 組：B 級
+for txt, word in (('刷新網頁', '刷新'), ('激活帳號', '激活'), ('寫好的調用', '調用'), ('簽合同', '合同')):
+    hits = zc.check_text(txt, only=('用語',))
+    expect([h['match'] for h in hits] == [word] and hits[0]['level'] == 'B', f'B 級：{word}')
+
 # 兩份共用清單必須一致（manuscript-check 的設定檔是 zh-tw-guard 的複本）
 for name in ('一簡多繁.txt', '錯轉.txt'):
     a = open(os.path.join(ROOT, 'skills', 'zh-tw-guard', 'data', name), encoding='utf-8-sig').read()
