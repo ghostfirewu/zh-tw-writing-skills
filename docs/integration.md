@@ -24,7 +24,7 @@
 2. **記錄鎖定資訊**：標籤、commit、每個檔案的雜湊。之後比對雜湊，就能發現副本有沒有被手改。
 3. **升級前先讀 `CHANGELOG.md`**：標「不相容」的條目代表第 4 節的介面變了，自己的 Lint 或腳本可能要跟著改。
 4. **升級後跑測試**：`python3 tests/run_all.py`。需要書稿工具包的話，先安裝 `skills/manuscript-check/scripts/requirements.txt`。
-5. **只拿需要的部分**：三支 skill 各自獨立，可以只取其中一支。`zh-tw-guard` 的 `data/一簡多繁.txt`、`data/錯轉.txt` 和 `manuscript-check/scripts/設定/` 裡的同名檔是同一份內容，只取書稿工具包時，用的是後者。
+5. **只拿需要的部分**：四支 skill 各自獨立，可以只取其中一支（`zh-tw-voice` 和 `zh-tw-anti-slop` 放在同一層時，會順便檢查樣本的 AI 腔密度；沒有也能跑）。`zh-tw-guard` 的 `data/一簡多繁.txt`、`data/錯轉.txt` 和 `manuscript-check/scripts/設定/` 裡的同名檔是同一份內容，只取書稿工具包時，用的是後者。
 
 ## 4. 可以依賴的介面
 
@@ -34,7 +34,7 @@
 
 | 路徑 | 內容 |
 |---|---|
-| `skills/<名稱>/SKILL.md` | 三支 skill 的入口：`zh-tw-guard`、`zh-tw-anti-slop`、`manuscript-check` |
+| `skills/<名稱>/SKILL.md` | 四支 skill 的入口：`zh-tw-guard`、`zh-tw-anti-slop`、`zh-tw-voice`、`manuscript-check` |
 | `skills/zh-tw-guard/data/terms.tsv` | 中國用語表 |
 | `skills/zh-tw-guard/data/一簡多繁.txt`、`錯轉.txt` | 字形清單 |
 | `skills/zh-tw-anti-slop/data/slop.tsv` | AI 腔詞條 |
@@ -59,6 +59,8 @@
 | `zhtw_check.py` | 檔案（`-`＝標準輸入）、`--only`（逗號分隔：簡體、一簡多繁、錯轉、用語）、`--level A\|B\|all`、`--json`、`--config-dir`、`--no-config` | 有簡體、一簡多繁、錯轉或 A 級用語＝1；只有 B 級或沒有命中＝0；用法錯誤＝2 |
 | `slop_scan.py` | 檔案（`-`＝標準輸入）、`--json`、`--summary`、`--config-dir`、`--no-config` | 有命中＝1；沒有＝0；用法錯誤＝2 |
 | `rewrite_diff.py` | 原文、改寫後、`--json` | 有任何增減＝1；沒有＝0；用法錯誤＝2 |
+| `voice_profile.py` | 樣本檔（可多個，`-`＝標準輸入）、`--json`、`--out`、`--phrase`（可重複）、`--split` | 成功＝0；用法錯誤或讀不到檔案＝2 |
+| `voice_check.py` | 草稿（`-`＝標準輸入）、`--register 社群\|正式`（必填）、`--profile`、`--config-dir`、`--json` | 有超出或長句＝1；沒有＝0；用法錯誤、社群模式找不到風格檔＝2 |
 | `manuscript-check` 三支 | 見 `skills/manuscript-check/SKILL.md`；`--設定` 可指向自己的設定檔 | 照各工具說明 |
 
 `--json` 的輸出欄位，在同一個主版號內只會新增，不會改名或刪除。
@@ -81,6 +83,8 @@
 | `terms.tsv` | 追加中國用語；和內建同一個詞時，以這裡為準 | `zhtw_check.py` |
 | `slop.tsv` | 追加 AI 腔詞條；比對時排在內建詞條之前，和內建同一個樣式時以這裡為準 | `slop_scan.py` |
 | `allow.txt` | 白名單，一行一個詞；命中落在這些詞裡就不報（品牌名、專名、地名、引文）| 兩支掃描器與 hook |
+| `voice.json` | 個人風格的統計值，由 `voice_profile.py --out` 產生；欄位見下 | `voice_check.py` |
+| `voice.md` | 個人風格的質性描述與分類（`身分`／`語域:社群`／`缺陷`），格式見 `skills/zh-tw-voice/references/voice-template.md` | agent（`zh-tw-voice`），腳本不解析 |
 
 - **找資料夾的順序**：`--config-dir` → 環境變數 `ZHTW_WRITING_DIR` → `$CLAUDE_PROJECT_DIR/.zh-tw-writing` → 目前目錄的 `.zh-tw-writing`。**不往上層資料夾找**，在專案的子資料夾裡執行時，請用環境變數或 `--config-dir`。`--config-dir` 指到不存在的路徑時，結束代碼 2；環境變數 `ZHTW_WRITING_DIR` 指到不存在的路徑時不報錯，直接改找下一順位。
 - 三個檔案都是 UTF-8，`#` 或 `'` 開頭的行是註解。
@@ -88,4 +92,6 @@
 - 掃描器的輸出倒數第二行會寫「套用專案設定…（本次略過 N 筆）」，讓人知道白名單藏掉了多少命中（`--json` 不輸出這一行）。
 - **白名單只放確定的專名**：寫太寬（例如放「一站式」三個字），會連真正的 AI 腔一起藏掉。
 - 設定檔格式錯誤的列（`terms.tsv` 級別不是 A／B、`slop.tsv` 缺類別欄、正規式寫錯、含無法解碼的字元）會被略過，不會讓工具中斷。
+- `voice.json` 的欄位：`版本`、`樣本`（篇數、字數、信心）、`句長`（p25、中位數、p75）、`段落長`、`每千字`（語氣詞、驚嘆號、問號、刪節號、破折號、波浪號、emoji、網路用語、英文詞；網址不算字數）、`語氣詞`、`自稱`、`口頭禪`、`長句上限`、`樣本明細`（檔名、字數、AI腔每千字、疑似AI腔）。同一個主版號內只新增欄位。使用者可以手改「長句上限」和「口頭禪」。
+- `voice.json`、`voice.md` 是個人資料：專案是公開 repo 時，請加進 `.gitignore`。`voice.json` 只存統計值和檔名，不存原文。
 - 書稿工具包不讀這個資料夾，改用它自己的 `--設定` 參數指向另一份 `設定.ini`。
