@@ -1,7 +1,7 @@
 """② 簡體殘留、一簡多繁、錯轉繁、異常字元。
 
 簡體字判準用字元集特徵（不用手寫字表）：GB2312 收錄、標準 Big5 沒收錄的漢字列為候選。
-地名、日本人名、罕用植物名常屬誤報，由編輯逐字判斷。
+台灣也用的字（酶、肽……）列在 設定/台灣正字.txt，不報；地名、日本人名、罕用植物名常屬誤報，由編輯逐字判斷。
 """
 from collections import Counter, defaultdict
 from functools import lru_cache
@@ -36,6 +36,12 @@ def gb_only_chars():
     return frozenset(c for c in gb - big5 if is_cjk(c))
 
 
+def taiwan_chars(cfg):
+    """設定的台灣正字清單：標準 Big5 沒收、但台灣正式使用的字（酶、肽……），不算簡體。"""
+    path = cfg['簡體'].get('台灣正字清單', '') if cfg.has_section('簡體') else ''
+    return frozenset(ln.split('\t')[0].strip() for ln in read_lines(path) if ln.strip())
+
+
 def _odd_char(ch):
     o = ord(ch)
     if 0xE000 <= o <= 0xF8FF or o >= 0xF0000:
@@ -54,7 +60,7 @@ def _odd_char(ch):
 def run(doc, cfg):
     res = Result('② 簡體與異常字元')
     sec = cfg['簡體']
-    gb_only = gb_only_chars()
+    gb_only = gb_only_chars() - taiwan_chars(cfg)
 
     seen = Counter()
     for p in doc.paras:
